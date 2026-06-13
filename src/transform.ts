@@ -77,7 +77,7 @@ function buildFoodHeadingRegex(foodHeading: string): RegExp {
   return new RegExp(`^##\\s+${escapeRegExp(foodHeading)}\\s*$`);
 }
 
-function extractGoalsFromEntries(entries: Iterable<[string, string]>): Record<string, number> {
+function extractGoalsFromEntries(entries: Iterable<readonly [string, string]>): Record<string, number> {
   const goals: Record<string, number> = {};
 
   for (const [rawKey, rawValue] of entries) {
