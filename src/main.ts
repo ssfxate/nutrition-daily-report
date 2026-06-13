@@ -31,6 +31,7 @@ export default class NutritionDailyReportPlugin extends Plugin {
     };
 
     this.settings.goalsPath = normalizePath(this.settings.goalsPath || DEFAULT_SETTINGS.goalsPath);
+    this.settings.foodHeading = this.settings.foodHeading?.trim() || DEFAULT_SETTINGS.foodHeading;
   }
 
   async saveSettings(): Promise<void> {
@@ -56,7 +57,7 @@ export default class NutritionDailyReportPlugin extends Plugin {
         this.app.vault.read(goalsFile)
       ]);
 
-      const updatedText = buildGoalComparisonUpdate(dailyText, goalsText);
+      const updatedText = buildGoalComparisonUpdate(dailyText, goalsText, this.settings.foodHeading);
       if (updatedText === dailyText) {
         new Notice("Nutrition Daily Report: comparison block is already up to date.");
         return;

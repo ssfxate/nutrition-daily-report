@@ -27,8 +27,17 @@ var import_obsidian2 = require("obsidian");
 
 // src/settings.ts
 var import_obsidian = require("obsidian");
+
+// src/settings-utils.ts
+function normalizeHeadingValue(value) {
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : null;
+}
+
+// src/settings.ts
 var DEFAULT_SETTINGS = {
-  goalsPath: "nutrition-goals.md"
+  goalsPath: "nutrition-goals.md",
+  foodHeading: "Food"
 };
 var NutritionDailyReportSettingTab = class extends import_obsidian.PluginSettingTab {
   plugin;
@@ -46,6 +55,17 @@ var NutritionDailyReportSettingTab = class extends import_obsidian.PluginSetting
         await this.plugin.saveSettings();
       })
     );
+    new import_obsidian.Setting(containerEl).setName("Food section heading").setDesc("Heading under which the comparison table is inserted.").addText(
+      (text) => text.setPlaceholder(DEFAULT_SETTINGS.foodHeading).setValue(this.plugin.settings.foodHeading).onChange(async (value) => {
+        const heading = normalizeHeadingValue(value);
+        if (!heading) {
+          new import_obsidian.Notice("Nutrition Daily Report: Food section heading cannot be empty.");
+          return;
+        }
+        this.plugin.settings.foodHeading = heading;
+        await this.plugin.saveSettings();
+      })
+    );
   }
 };
 
@@ -60,11 +80,11 @@ var METRICS = [
   "sugar",
   "sodium"
 ];
-var FOOD_HEADING_RE = /^##\s+Food\s*$/;
 var GOAL_HEADING_RE = /^###\s+Goal comparison\s*$/;
 var NEXT_HEADING_RE = /^##\s+/;
 var TABLE_ROW_RE = /^\s*\|/;
 var BLANK_LINE_RE = /^\s*$/;
+var DEFAULT_FOOD_HEADING = "Food";
 function normalizeText(text) {
   return String(text).replace(/^\uFEFF/, "").replace(/\r\n/g, "\n");
 }
@@ -100,6 +120,12 @@ function formatDelta(value) {
 }
 function titleFromMetric(metric) {
   return metric.split("_").map((part) => part.charAt(0).toUpperCase() + part.slice(1)).join(" ");
+}
+function escapeRegExp(value) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+function buildFoodHeadingRegex(foodHeading) {
+  return new RegExp(`^##\\s+${escapeRegExp(foodHeading)}\\s*$`);
 }
 function parseFrontmatter(text) {
   const normalized = normalizeText(text);
@@ -178,12 +204,13 @@ function removeExistingGoalComparison(sectionLines) {
   }
   return cleaned;
 }
-function updateDailyNoteText(text, goalComparisonBlock) {
+function updateDailyNoteText(text, goalComparisonBlock, foodHeading = DEFAULT_FOOD_HEADING) {
   const normalized = normalizeText(text);
   const lines = normalized.split("\n");
-  const foodIndex = lines.findIndex((line) => FOOD_HEADING_RE.test(line));
+  const foodHeadingRe = buildFoodHeadingRegex(foodHeading);
+  const foodIndex = lines.findIndex((line) => foodHeadingRe.test(line));
   if (foodIndex === -1) {
-    throw new Error("Could not find ## Food section in the active note");
+    throw new Error(`Could not find ## ${foodHeading} section in the active note`);
   }
   let nextSectionIndex = lines.length;
   for (let i = foodIndex + 1; i < lines.length; i += 1) {
@@ -203,11 +230,11 @@ function updateDailyNoteText(text, goalComparisonBlock) {
   const updatedFoodSection = contentSection.length > 0 ? [goalComparisonBlock, "", ...contentSection] : [goalComparisonBlock];
   return [...beforeFood, ...updatedFoodSection, ...afterFood].join("\n").replace(/\n+$/, "\n");
 }
-function buildGoalComparisonUpdate(dailyText, goalsText) {
+function buildGoalComparisonUpdate(dailyText, goalsText, foodHeading = DEFAULT_FOOD_HEADING) {
   const { frontmatter } = parseFrontmatter(dailyText);
   const goals = parseNutritionGoals(goalsText);
   const goalComparisonBlock = buildGoalComparisonBlock(goals, frontmatter);
-  return updateDailyNoteText(dailyText, goalComparisonBlock);
+  return updateDailyNoteText(dailyText, goalComparisonBlock, foodHeading);
 }
 
 // src/main.ts
@@ -233,6 +260,7 @@ var NutritionDailyReportPlugin = class extends import_obsidian2.Plugin {
       ...await this.loadData()
     };
     this.settings.goalsPath = (0, import_obsidian2.normalizePath)(this.settings.goalsPath || DEFAULT_SETTINGS.goalsPath);
+    this.settings.foodHeading = this.settings.foodHeading?.trim() || DEFAULT_SETTINGS.foodHeading;
   }
   async saveSettings() {
     await this.saveData(this.settings);
@@ -253,7 +281,7 @@ var NutritionDailyReportPlugin = class extends import_obsidian2.Plugin {
         this.app.vault.read(file),
         this.app.vault.read(goalsFile)
       ]);
-      const updatedText = buildGoalComparisonUpdate(dailyText, goalsText);
+      const updatedText = buildGoalComparisonUpdate(dailyText, goalsText, this.settings.foodHeading);
       if (updatedText === dailyText) {
         new import_obsidian2.Notice("Nutrition Daily Report: comparison block is already up to date.");
         return;

@@ -79,6 +79,21 @@ test("updateDailyNoteText throws when Food section is missing", () => {
   );
 });
 
+test("updateDailyNoteText supports a custom heading", () => {
+  const customDailyNote = dailyNote.replace("## Food", "## Meals");
+  const updated = updateDailyNoteText(customDailyNote, "### Goal comparison", "Meals");
+
+  assert.ok(updated.includes("### Goal comparison"));
+  assert.ok(updated.indexOf("### Goal comparison") < updated.indexOf("Breakfast entry"));
+});
+
+test("buildGoalComparisonUpdate supports a custom heading", () => {
+  const customDailyNote = dailyNote.replace("## Food", "## Meals");
+  const updated = buildGoalComparisonUpdate(customDailyNote, goalsNote, "Meals");
+
+  assert.ok(updated.includes("| Calories       | 1800 |    +200 |   2000 |"));
+});
+
 test("buildGoalComparisonUpdate throws when goals block is missing", () => {
   assert.throws(
     () => buildGoalComparisonUpdate(dailyNote, "no fenced block here"),

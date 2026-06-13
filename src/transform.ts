@@ -9,12 +9,12 @@ export const METRICS = [
   "sodium",
 ] as const;
 
-const FOOD_HEADING_RE = /^##\s+Food\s*$/;
 const GOAL_HEADING_RE = /^###\s+Goal comparison\s*$/;
 const NEXT_HEADING_RE = /^##\s+/;
 const NEXT_SUBHEADING_RE = /^###\s+/;
 const TABLE_ROW_RE = /^\s*\|/;
 const BLANK_LINE_RE = /^\s*$/;
+const DEFAULT_FOOD_HEADING = "Food";
 
 export type Frontmatter = Record<string, string>;
 export type NutritionGoals = Partial<Record<(typeof METRICS)[number], number>>;
@@ -67,6 +67,14 @@ function titleFromMetric(metric: string): string {
     .split("_")
     .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
     .join(" ");
+}
+
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function buildFoodHeadingRegex(foodHeading: string): RegExp {
+  return new RegExp(`^##\\s+${escapeRegExp(foodHeading)}\\s*$`);
 }
 
 export function parseFrontmatter(text: string): { frontmatter: Frontmatter; body: string } {
@@ -164,13 +172,14 @@ export function removeExistingGoalComparison(sectionLines: string[]): string[] {
   return cleaned;
 }
 
-export function updateDailyNoteText(text: string, goalComparisonBlock: string): string {
+export function updateDailyNoteText(text: string, goalComparisonBlock: string, foodHeading = DEFAULT_FOOD_HEADING): string {
   const normalized = normalizeText(text);
   const lines = normalized.split("\n");
-  const foodIndex = lines.findIndex((line) => FOOD_HEADING_RE.test(line));
+  const foodHeadingRe = buildFoodHeadingRegex(foodHeading);
+  const foodIndex = lines.findIndex((line) => foodHeadingRe.test(line));
 
   if (foodIndex === -1) {
-    throw new Error("Could not find ## Food section in the active note");
+    throw new Error(`Could not find ## ${foodHeading} section in the active note`);
   }
 
   let nextSectionIndex = lines.length;
@@ -195,9 +204,9 @@ export function updateDailyNoteText(text: string, goalComparisonBlock: string): 
   return [...beforeFood, ...updatedFoodSection, ...afterFood].join("\n").replace(/\n+$/, "\n");
 }
 
-export function buildGoalComparisonUpdate(dailyText: string, goalsText: string): string {
+export function buildGoalComparisonUpdate(dailyText: string, goalsText: string, foodHeading = DEFAULT_FOOD_HEADING): string {
   const { frontmatter } = parseFrontmatter(dailyText);
   const goals = parseNutritionGoals(goalsText);
   const goalComparisonBlock = buildGoalComparisonBlock(goals, frontmatter);
-  return updateDailyNoteText(dailyText, goalComparisonBlock);
+  return updateDailyNoteText(dailyText, goalComparisonBlock, foodHeading);
 }
