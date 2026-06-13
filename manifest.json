@@ -1,0 +1,9 @@
+{
+  "id": "nutrition-daily-report",
+  "name": "Nutrition Daily Report",
+  "version": "0.1.0",
+  "minAppVersion": "1.5.0",
+  "description": "Insert a nutrition goal comparison table into the active daily note.",
+  "author": "Vadim Nechaev",
+  "isDesktopOnly": false
+}
