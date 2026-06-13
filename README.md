@@ -33,6 +33,8 @@ For a one-command local release, use `npm run release:patch`. It bumps the versi
 - Extracts `ft-*` frontmatter values from the note.
 - Replaces or inserts the `### Goal comparison` block directly after the configured section heading.
 
+The nutrition goals note can store goals either in YAML frontmatter or in the first fenced code block. The plugin reads frontmatter first when it contains goal fields, then falls back to the fenced block format.
+
 Example generated block:
 
 ```md

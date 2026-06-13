@@ -55,6 +55,34 @@ test("parseNutritionGoals reads the first fenced block", () => {
   });
 });
 
+test("parseNutritionGoals reads goal values from frontmatter", () => {
+  const frontmatterGoalsNote = [
+    "---",
+    "ft-calories: 1800",
+    "ft-fats: 60",
+    "ft-saturated_fats: 18",
+    "ft-protein: 110",
+    "ft-carbs: 230",
+    "ft-fiber: 28",
+    "ft-sugar: 35",
+    "ft-sodium: 1700",
+    "---",
+    "",
+    "No fenced block here"
+  ].join("\n");
+
+  assert.deepEqual(parseNutritionGoals(frontmatterGoalsNote), {
+    calories: 1800,
+    fats: 60,
+    saturated_fats: 18,
+    protein: 110,
+    carbs: 230,
+    fiber: 28,
+    sugar: 35,
+    sodium: 1700
+  });
+});
+
 test("inserts the comparison block after Food", () => {
   const updated = buildGoalComparisonUpdate(dailyNote, goalsNote);
 
@@ -97,6 +125,6 @@ test("buildGoalComparisonUpdate supports a custom heading", () => {
 test("buildGoalComparisonUpdate throws when goals block is missing", () => {
   assert.throws(
     () => buildGoalComparisonUpdate(dailyNote, "no fenced block here"),
-    /Could not find nutrition goals block/
+    /Could not find nutrition goals block or frontmatter/
   );
 });

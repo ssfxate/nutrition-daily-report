@@ -77,6 +77,22 @@ function buildFoodHeadingRegex(foodHeading: string): RegExp {
   return new RegExp(`^##\\s+${escapeRegExp(foodHeading)}\\s*$`);
 }
 
+function extractGoalsFromEntries(entries: Iterable<[string, string]>): Record<string, number> {
+  const goals: Record<string, number> = {};
+
+  for (const [rawKey, rawValue] of entries) {
+    const parsed = parseNumber(rawValue);
+    if (parsed === null) {
+      continue;
+    }
+
+    const key = rawKey.startsWith("ft-") ? rawKey.slice(3) : rawKey;
+    goals[key] = parsed;
+  }
+
+  return goals;
+}
+
 export function parseFrontmatter(text: string): { frontmatter: Frontmatter; body: string } {
   const normalized = normalizeText(text);
   if (!normalized.startsWith("---\n")) {
@@ -103,26 +119,24 @@ export function parseFrontmatter(text: string): { frontmatter: Frontmatter; body
 
 export function parseNutritionGoals(goalsText: string): Record<string, number> {
   const text = normalizeText(goalsText);
-  const blockMatch = text.match(/```(?:\w+)?\n([\s\S]*?)\n```/);
+  const { frontmatter, body } = parseFrontmatter(text);
+  const frontmatterGoals = extractGoalsFromEntries(Object.entries(frontmatter));
+  if (Object.keys(frontmatterGoals).length > 0) {
+    return frontmatterGoals;
+  }
+
+  const blockMatch = body.match(/```(?:\w+)?\n([\s\S]*?)\n```/);
   if (!blockMatch) {
-    throw new Error("Could not find nutrition goals block in nutrition goals note");
+    throw new Error("Could not find nutrition goals block or frontmatter in nutrition goals note");
   }
 
-  const goals: Record<string, number> = {};
-  for (const line of blockMatch[1].split("\n")) {
-    const fieldMatch = line.match(/^([A-Za-z0-9_.-]+):\s*(.*?)\s*$/);
-    if (!fieldMatch) {
-      continue;
-    }
+  const blockEntries = blockMatch[1]
+    .split("\n")
+    .map((line) => line.match(/^([A-Za-z0-9_.-]+):\s*(.*?)\s*$/))
+    .filter((fieldMatch): fieldMatch is RegExpMatchArray => fieldMatch !== null)
+    .map((fieldMatch) => [fieldMatch[1], fieldMatch[2]] as const);
 
-    const parsed = parseNumber(fieldMatch[2]);
-    if (parsed !== null) {
-      const key = fieldMatch[1].startsWith("ft-") ? fieldMatch[1].slice(3) : fieldMatch[1];
-      goals[key] = parsed;
-    }
-  }
-
-  return goals;
+  return extractGoalsFromEntries(blockEntries);
 }
 
 function buildComparisonRow(metric: string, actual: number | null, goal: number | null): string {

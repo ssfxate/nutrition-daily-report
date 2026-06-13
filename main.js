@@ -127,6 +127,18 @@ function escapeRegExp(value) {
 function buildFoodHeadingRegex(foodHeading) {
   return new RegExp(`^##\\s+${escapeRegExp(foodHeading)}\\s*$`);
 }
+function extractGoalsFromEntries(entries) {
+  const goals = {};
+  for (const [rawKey, rawValue] of entries) {
+    const parsed = parseNumber(rawValue);
+    if (parsed === null) {
+      continue;
+    }
+    const key = rawKey.startsWith("ft-") ? rawKey.slice(3) : rawKey;
+    goals[key] = parsed;
+  }
+  return goals;
+}
 function parseFrontmatter(text) {
   const normalized = normalizeText(text);
   if (!normalized.startsWith("---\n")) {
@@ -148,23 +160,17 @@ function parseFrontmatter(text) {
 }
 function parseNutritionGoals(goalsText) {
   const text = normalizeText(goalsText);
-  const blockMatch = text.match(/```(?:\w+)?\n([\s\S]*?)\n```/);
+  const { frontmatter, body } = parseFrontmatter(text);
+  const frontmatterGoals = extractGoalsFromEntries(Object.entries(frontmatter));
+  if (Object.keys(frontmatterGoals).length > 0) {
+    return frontmatterGoals;
+  }
+  const blockMatch = body.match(/```(?:\w+)?\n([\s\S]*?)\n```/);
   if (!blockMatch) {
-    throw new Error("Could not find nutrition goals block in nutrition goals note");
+    throw new Error("Could not find nutrition goals block or frontmatter in nutrition goals note");
   }
-  const goals = {};
-  for (const line of blockMatch[1].split("\n")) {
-    const fieldMatch = line.match(/^([A-Za-z0-9_.-]+):\s*(.*?)\s*$/);
-    if (!fieldMatch) {
-      continue;
-    }
-    const parsed = parseNumber(fieldMatch[2]);
-    if (parsed !== null) {
-      const key = fieldMatch[1].startsWith("ft-") ? fieldMatch[1].slice(3) : fieldMatch[1];
-      goals[key] = parsed;
-    }
-  }
-  return goals;
+  const blockEntries = blockMatch[1].split("\n").map((line) => line.match(/^([A-Za-z0-9_.-]+):\s*(.*?)\s*$/)).filter((fieldMatch) => fieldMatch !== null).map((fieldMatch) => [fieldMatch[1], fieldMatch[2]]);
+  return extractGoalsFromEntries(blockEntries);
 }
 function buildComparisonRow(metric, actual, goal) {
   const label = titleFromMetric(metric);
