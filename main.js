@@ -130,6 +130,9 @@ function buildFoodHeadingRegex(foodHeading) {
 function extractGoalsFromEntries(entries) {
   const goals = {};
   for (const [rawKey, rawValue] of entries) {
+    if (!rawKey.startsWith("ft-") && !METRICS.includes(rawKey)) {
+      continue;
+    }
     const parsed = parseNumber(rawValue);
     if (parsed === null) {
       continue;
@@ -166,11 +169,19 @@ function parseNutritionGoals(goalsText) {
     return frontmatterGoals;
   }
   const blockMatch = body.match(/```(?:\w+)?\n([\s\S]*?)\n```/);
-  if (!blockMatch) {
-    throw new Error("Could not find nutrition goals block or frontmatter in nutrition goals note");
+  if (blockMatch) {
+    const blockEntries = blockMatch[1].split("\n").map((line) => line.match(/^([A-Za-z0-9_.-]+):\s*(.*?)\s*$/)).filter((fieldMatch) => fieldMatch !== null).map((fieldMatch) => [fieldMatch[1], fieldMatch[2]]);
+    const blockGoals = extractGoalsFromEntries(blockEntries);
+    if (Object.keys(blockGoals).length > 0) {
+      return blockGoals;
+    }
   }
-  const blockEntries = blockMatch[1].split("\n").map((line) => line.match(/^([A-Za-z0-9_.-]+):\s*(.*?)\s*$/)).filter((fieldMatch) => fieldMatch !== null).map((fieldMatch) => [fieldMatch[1], fieldMatch[2]]);
-  return extractGoalsFromEntries(blockEntries);
+  const plainTextEntries = body.split("\n").map((line) => line.match(/^([A-Za-z0-9_.-]+):\s*(.*?)\s*$/)).filter((fieldMatch) => fieldMatch !== null).map((fieldMatch) => [fieldMatch[1], fieldMatch[2]]);
+  const plainTextGoals = extractGoalsFromEntries(plainTextEntries);
+  if (Object.keys(plainTextGoals).length > 0) {
+    return plainTextGoals;
+  }
+  throw new Error("Could not find nutrition goals block, frontmatter, or plain text goals in nutrition goals note");
 }
 function buildComparisonRow(metric, actual, goal) {
   const label = titleFromMetric(metric);
