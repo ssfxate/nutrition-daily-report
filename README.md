@@ -10,6 +10,20 @@ npm run build
 npm test
 ```
 
+## BRAT Release Flow
+
+This plugin is meant to be installed through [BRAT](https://github.com/TfTHacker/obsidian42-brat) from this GitHub repository. BRAT reads GitHub Releases, so stable updates must be published as tagged releases.
+
+Release process:
+
+1. Bump the package version locally with `npm version patch` or `npm version <exact-semver>`. The repo config disables the default `v` prefix, so the git tag is the exact semver string.
+2. The `preversion` script runs `typecheck`, `test`, and `build` before the version changes.
+3. The local `version` script syncs `manifest.json` and `versions.json` from `package.json`.
+4. Create a GitHub Release with the same tag and name as `package.json.version` / `manifest.json.version`.
+5. Attach `main.js` and `manifest.json` to the release, and `styles.css` if the plugin ever gains one.
+
+`versions.json` is kept in the repository as Obsidian release metadata, but BRAT itself updates from GitHub Releases.
+
 ## Behavior
 
 - Reads the active Markdown note.

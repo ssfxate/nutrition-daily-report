@@ -5,6 +5,8 @@
   "description": "Insert a nutrition goal comparison table into the active daily note.",
   "scripts": {
     "build": "node esbuild.config.mjs",
+    "preversion": "npm run typecheck && npm test && npm run build",
+    "version": "node version-bump.mjs",
     "test": "node --import tsx --test tests/*.test.ts",
     "typecheck": "tsc --noEmit"
   },
