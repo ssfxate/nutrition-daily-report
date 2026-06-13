@@ -22,6 +22,8 @@ Release process:
 4. Create a GitHub Release with the same tag and name as `package.json.version` / `manifest.json.version`.
 5. Attach `main.js` and `manifest.json` to the release, and `styles.css` if the plugin ever gains one.
 
+For a one-command local release, use `npm run release:patch`. It bumps the version, pushes the branch and tags, and creates the GitHub Release through `gh`.
+
 `versions.json` is kept in the repository as Obsidian release metadata, but BRAT itself updates from GitHub Releases.
 
 ## Behavior

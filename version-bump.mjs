@@ -16,7 +16,7 @@ manifest.version = targetVersion;
 const minAppVersion = typeof manifest.minAppVersion === "string" ? manifest.minAppVersion.trim() : "";
 const versions = existsSync(versionsPath) ? JSON.parse(readFileSync(versionsPath, "utf8")) : {};
 
-if (minAppVersion && !Object.values(versions).includes(minAppVersion)) {
+if (minAppVersion) {
   versions[targetVersion] = minAppVersion;
 }
 
